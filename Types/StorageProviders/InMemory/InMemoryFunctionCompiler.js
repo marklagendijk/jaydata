@@ -61,9 +61,41 @@ $C('$data.storageProviders.InMemory.InMemoryFunctionCompiler', $data.Expressions
     },
 
     VisitEntityExpression: function (expression, context) {
-        context.data += expression.selector.lambda;
-        context.lambda = expression.selector.lambda;
+        context.lambda = getLambdaName(expression);
+        context.data += getPropertyName(expression);
+
         this.Visit(expression.source, context);
+
+        /**
+         * Recursively gets the property name.
+         * Eg: 'thing.Category.Item.Id'.
+         * @param expression
+         * @returns {string}
+         */
+        function getPropertyName(expression){
+            if(expression.selector && expression.selector.lambda){
+                return expression.selector.lambda;
+            }
+            else if(expression.source.nodeType === 'EntitySet' && expression.source.selector.associationInfo.ToMultiplicity === '0..1'){
+                return getPropertyName(expression.source.source) + '.' + expression.source.selector.associationInfo.FromPropertyName;
+            }
+        }
+
+        /**
+         * Recursively gets the lambda name.
+         * Eg: 'thing'.
+         * @param expression
+         * @returns {string|undefined}
+         */
+        function getLambdaName(expression){
+            if(expression.selector && expression.selector.lambda){
+                return expression.selector.lambda;
+            }
+            else if(expression.source){
+                return getLambdaName(expression.source);
+            }
+            return undefined;
+        }
     },
     VisitEntitySetExpression: function () { },
     VisitObjectLiteralExpression: function (expression, context) {
